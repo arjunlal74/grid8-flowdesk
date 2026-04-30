@@ -1,0 +1,59 @@
+services:
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: grid8_backend_dev
+    command: npm run dev
+    volumes:
+      - ../backend/src:/app/src
+      - ../backend/prisma:/app/prisma
+    environment:
+      NODE_ENV: development
+      PORT: 3003
+      DATABASE_URL: "mysql://grid8:grid8secret@db:3306/grid8"
+      JWT_SECRET: dev-secret-change-me
+      JWT_EXPIRES_IN: "7d"
+      CORS_ORIGIN: "http://localhost:5173"
+    ports:
+      - "3003:3003"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  frontend:
+    image: node:20-alpine
+    container_name: grid8_frontend_dev
+    working_dir: /app
+    command: sh -c "npm install --legacy-peer-deps && npm run dev -- --host 0.0.0.0"
+    volumes:
+      - ../frontend:/app
+      - /app/node_modules
+    environment:
+      VITE_API_URL: ""
+      BACKEND_URL: "http://backend:3003"
+    ports:
+      - "5173:5173"
+    depends_on:
+      - backend
+
+  db:
+    image: mysql:8.0
+    container_name: grid8_db_dev
+    environment:
+      MYSQL_ROOT_PASSWORD: rootsecret
+      MYSQL_DATABASE: grid8
+      MYSQL_USER: grid8
+      MYSQL_PASSWORD: grid8secret
+    ports:
+      - "3307:3306"
+    volumes:
+      - dbdata_dev:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-prootsecret"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  dbdata_dev:

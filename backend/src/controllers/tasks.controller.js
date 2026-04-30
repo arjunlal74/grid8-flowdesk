@@ -1,0 +1,160 @@
+import prisma from '../config/db.js';
+import { logActivity } from '../services/activity.service.js';
+
+const taskInclude = {
+  status: true,
+  project: { select: { id: true, name: true, color: true } },
+  assignee: { select: { id: true, fullName: true, avatarUrl: true } },
+  creator: { select: { id: true, fullName: true, avatarUrl: true } },
+  lead: { select: { id: true, contactName: true } },
+  subtasks: { include: { status: true } },
+};
+
+export const index = async (req, res, next) => {
+  try {
+    const { view = 'list', project, assignee, priority, search, page = 1, limit = 25 } = req.query;
+    const where = { isArchived: false };
+    if (project) where.projectId = parseInt(project);
+    if (assignee) where.assigneeId = parseInt(assignee);
+    if (priority) where.priority = priority;
+    if (search) where.title = { contains: search };
+    if (req.user.role === 'MEMBER') {
+      where.OR = [{ assigneeId: req.user.id }, { creatorId: req.user.id }];
+    }
+
+    if (view === 'kanban') {
+      const statuses = await prisma.taskStatus.findMany({
+        where: { isActive: true }, orderBy: { order: 'asc' },
+      });
+      const columns = await Promise.all(statuses.map(async (s) => {
+        const tasks = await prisma.task.findMany({
+          where: { ...where, statusId: s.id },
+          include: taskInclude,
+          orderBy: { position: 'asc' },
+        });
+        return { ...s, tasks };
+      }));
+      return res.json(columns);
+    }
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+    const [total, tasks] = await Promise.all([
+      prisma.task.count({ where }),
+      prisma.task.findMany({ where, include: taskInclude, orderBy: { createdAt: 'desc' }, skip, take: parseInt(limit) }),
+    ]);
+    res.json({ data: tasks, total, page: parseInt(page), limit: parseInt(limit) });
+  } catch (err) { next(err); }
+};
+
+export const show = async (req, res, next) => {
+  try {
+    const task = await prisma.task.findUnique({
+      where: { id: parseInt(req.params.id) },
+      include: { ...taskInclude, attachments: true },
+    });
+    if (!task) return res.status(404).json({ error: 'Not found' });
+    res.json(task);
+  } catch (err) { next(err); }
+};
+
+export const create = async (req, res, next) => {
+  try {
+    const task = await prisma.task.create({
+      data: { ...req.body, creatorId: req.user.id, assigneeId: req.body.assigneeId || req.user.id },
+      include: taskInclude,
+    });
+    await logActivity({ actorId: req.user.id, entityType: 'Task', entityId: task.id, action: 'created', taskId: task.id });
+    res.status(201).json(task);
+  } catch (err) { next(err); }
+};
+
+export const update = async (req, res, next) => {
+  try {
+    const id = parseInt(req.params.id);
+    const existing = await prisma.task.findUnique({ where: { id } });
+    if (!existing) return res.status(404).json({ error: 'Not found' });
+
+    const changes = {};
+    if (req.body.statusId && req.body.statusId !== existing.statusId) {
+      const [from, to] = await Promise.all([
+        prisma.taskStatus.findUnique({ where: { id: existing.statusId } }),
+        prisma.taskStatus.findUnique({ where: { id: req.body.statusId } }),
+      ]);
+      changes.status = { from: from?.name, to: to?.name };
+    }
+
+    const task = await prisma.task.update({
+      where: { id }, data: req.body, include: taskInclude,
+    });
+
+    if (Object.keys(changes).length > 0) {
+      await logActivity({ actorId: req.user.id, entityType: 'Task', entityId: id, action: 'updated', changes, taskId: id });
+    }
+    res.json(task);
+  } catch (err) { next(err); }
+};
+
+export const destroy = async (req, res, next) => {
+  try {
+    await prisma.task.delete({ where: { id: parseInt(req.params.id) } });
+    res.status(204).end();
+  } catch (err) { next(err); }
+};
+
+export const move = async (req, res, next) => {
+  try {
+    const id = parseInt(req.params.id);
+    const { statusId, position } = req.body;
+    const existing = await prisma.task.findUnique({ where: { id } });
+    const task = await prisma.task.update({
+      where: { id },
+      data: { statusId: parseInt(statusId), position: parseInt(position) },
+      include: taskInclude,
+    });
+    if (existing.statusId !== parseInt(statusId)) {
+      const [from, to] = await Promise.all([
+        prisma.taskStatus.findUnique({ where: { id: existing.statusId } }),
+        prisma.taskStatus.findUnique({ where: { id: parseInt(statusId) } }),
+      ]);
+      await logActivity({ actorId: req.user.id, entityType: 'Task', entityId: id, action: 'status_changed', changes: { status: { from: from?.name, to: to?.name } }, taskId: id });
+    }
+    res.json(task);
+  } catch (err) { next(err); }
+};
+
+export const complete = async (req, res, next) => {
+  try {
+    const id = parseInt(req.params.id);
+    const doneStatus = await prisma.taskStatus.findFirst({ where: { isDone: true } });
+    const task = await prisma.task.update({
+      where: { id },
+      data: { statusId: doneStatus.id, completedAt: new Date() },
+      include: taskInclude,
+    });
+    await logActivity({ actorId: req.user.id, entityType: 'Task', entityId: id, action: 'completed', taskId: id });
+    res.json(task);
+  } catch (err) { next(err); }
+};
+
+export const getComments = async (req, res, next) => {
+  try {
+    const comments = await prisma.comment.findMany({
+      where: { taskId: parseInt(req.params.id) },
+      include: { author: { select: { id: true, fullName: true, avatarUrl: true } } },
+      orderBy: { createdAt: 'asc' },
+    });
+    res.json(comments);
+  } catch (err) { next(err); }
+};
+
+export const addComment = async (req, res, next) => {
+  try {
+    const taskId = parseInt(req.params.id);
+    const comment = await prisma.comment.create({
+      data: { body: req.body.body, authorId: req.user.id, taskId },
+      include: { author: { select: { id: true, fullName: true, avatarUrl: true } } },
+    });
+    await logActivity({ actorId: req.user.id, entityType: 'Task', entityId: taskId, action: 'commented', taskId });
+    res.status(201).json(comment);
+  } catch (err) { next(err); }
+};
