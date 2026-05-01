@@ -1,4 +1,3 @@
-version: "3.9"
 
 services:
   backend:
@@ -34,16 +33,16 @@ services:
     container_name: grid8_db
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: rootsecret
+      MYSQL_DATABASE: grid8
+      MYSQL_USER: grid8
+      MYSQL_PASSWORD: grid8secret
     volumes:
       - dbdata:/var/lib/mysql
     ports:
       - "3307:3306"
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-prootsecret"]
       interval: 5s
       timeout: 5s
       retries: 20

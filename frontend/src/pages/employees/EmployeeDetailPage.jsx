@@ -1,23 +1,34 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getEmployee } from '../../api/employees.api.js';
+import { useState } from 'react';
 import Badge from '../../components/ui/Badge.jsx';
 import Avatar from '../../components/ui/Avatar.jsx';
+import Button from '../../components/ui/Button.jsx';
+import { useAuthStore } from '../../store/authStore.js';
+import EditEmployeeDrawer from '../../components/employees/EditEmployeeDrawer.jsx';
 
 const ROLE_COLORS = { ADMIN: '#F87171', MANAGER: '#FBBF24', MEMBER: '#6B6B6B' };
 
 export default function EmployeeDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const currentUser = useAuthStore(s => s.user);
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const { data: emp, isLoading } = useQuery({ queryKey: ['employee', id], queryFn: () => getEmployee(id) });
 
   if (isLoading) return <div className="p-6 text-text-tertiary text-[13px]">Loading…</div>;
   if (!emp) return <div className="p-6 text-danger text-[13px]">Employee not found</div>;
 
+  const canEdit = currentUser?.role === 'ADMIN' || currentUser?.id === parseInt(id);
+
   return (
     <div className="p-6">
-      <div className="flex items-center gap-3 mb-6">
+      <div className="flex items-center justify-between mb-6">
         <button onClick={() => navigate('/employees')} className="text-text-tertiary hover:text-text-primary text-[13px]">← Employees</button>
+        {canEdit && (
+          <Button variant="secondary" size="sm" onClick={() => setDrawerOpen(true)}>Edit Profile</Button>
+        )}
       </div>
 
       <div className="bg-bg-surface border rounded-card p-6 max-w-xl">
@@ -49,6 +60,13 @@ export default function EmployeeDetailPage() {
           ) : null)}
         </div>
       </div>
+
+      <EditEmployeeDrawer 
+        open={drawerOpen} 
+        onClose={() => setDrawerOpen(false)} 
+        employee={emp} 
+        isAdmin={currentUser?.role === 'ADMIN'}
+      />
     </div>
   );
 }

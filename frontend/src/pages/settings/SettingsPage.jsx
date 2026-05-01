@@ -8,10 +8,8 @@ import { useEffect } from 'react';
 
 const NAV = [
   { to: '/settings', label: 'Organization', end: true },
-  { to: '/settings/lead-statuses', label: 'Lead Statuses' },
-  { to: '/settings/task-statuses', label: 'Task Statuses' },
-  { to: '/settings/categories', label: 'Categories' },
-  { to: '/settings/tags', label: 'Tags' },
+  { to: '/settings/leads', label: 'Lead Settings' },
+  { to: '/settings/tasks', label: 'Task Settings' },
 ];
 
 const fieldStyle = {
@@ -69,21 +67,36 @@ function OrgSettings() {
   });
 
   return (
-    <div className="max-w-md">
-      <h1 className="text-[16px] font-semibold mb-5" style={{ color: 'var(--text-primary)' }}>Organization</h1>
-      <form onSubmit={handleSubmit(mutate)} className="space-y-4">
-        <div className="space-y-1">
-          <label className="text-[11.5px] font-medium" style={{ color: 'var(--text-secondary)' }}>Organization Name</label>
-          <input style={fieldStyle} {...register('orgName')} />
+    <div>
+      <div className="mb-5">
+        <h1 className="text-[16px] font-semibold" style={{ color: 'var(--text-primary)' }}>Organization</h1>
+        <p className="text-[12px] mt-0.5" style={{ color: 'var(--text-tertiary)' }}>
+          Core settings for your workspace
+        </p>
+      </div>
+
+      <form onSubmit={handleSubmit(mutate)}>
+        <div className="rounded-xl overflow-hidden mb-5"
+          style={{ background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)' }}>
+          {[
+            { key: 'orgName', label: 'Organization Name', placeholder: 'Grid8' },
+            { key: 'defaultCurrency', label: 'Default Currency', placeholder: 'INR' },
+            { key: 'timezone', label: 'Timezone', placeholder: 'Asia/Kolkata' },
+          ].map((field, i, arr) => (
+            <div key={field.key}
+              className="grid items-center px-4 py-3.5"
+              style={{
+                gridTemplateColumns: '180px 1fr',
+                borderBottom: i < arr.length - 1 ? '1px solid var(--border-subtle)' : 'none',
+              }}>
+              <label className="text-[12.5px] font-medium" style={{ color: 'var(--text-secondary)' }}>
+                {field.label}
+              </label>
+              <input style={{ ...fieldStyle, maxWidth: '400px' }} placeholder={field.placeholder} {...register(field.key)} />
+            </div>
+          ))}
         </div>
-        <div className="space-y-1">
-          <label className="text-[11.5px] font-medium" style={{ color: 'var(--text-secondary)' }}>Default Currency</label>
-          <input style={fieldStyle} {...register('defaultCurrency')} />
-        </div>
-        <div className="space-y-1">
-          <label className="text-[11.5px] font-medium" style={{ color: 'var(--text-secondary)' }}>Timezone</label>
-          <input style={fieldStyle} {...register('timezone')} />
-        </div>
+
         <Button type="submit" disabled={isPending} size="sm">
           {isPending ? 'Saving…' : 'Save Changes'}
         </Button>

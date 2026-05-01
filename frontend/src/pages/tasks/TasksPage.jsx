@@ -28,25 +28,38 @@ export default function TasksPage() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['tasks'] }); toast.success('Task moved'); },
   });
 
+  const viewTabs = (
+    <div className="flex items-center gap-5">
+      {[{ v: 'kanban', label: 'Board', I: LayoutGrid }, { v: 'list', label: 'List', I: List }].map(({ v, label, I }) => (
+        <button key={v} onClick={() => setView(v)}
+          className="flex items-center gap-1.5 pb-1 relative transition-colors"
+          style={{ 
+            color: view === v ? 'var(--accent)' : 'var(--text-tertiary)',
+            borderBottom: view === v ? '2px solid var(--accent)' : '2px solid transparent',
+            fontWeight: view === v ? 600 : 500,
+            fontSize: '13px'
+          }}>
+          <I size={14} />
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+
   const headerActions = (
     <>
-      <div className="flex items-center rounded-lg p-0.5" style={{ background: 'var(--bg-surface)' }}>
-        {[{ v: 'list', I: List }, { v: 'kanban', I: LayoutGrid }].map(({ v, I }) => (
-          <button key={v} onClick={() => setView(v)}
-            className="p-1.5 rounded-md transition-colors"
-            style={{ background: view === v ? 'var(--bg-surface-2)' : 'transparent', color: view === v ? 'var(--text-primary)' : 'var(--text-tertiary)' }}>
-            <I size={13} />
-          </button>
-        ))}
-      </div>
       <Button onClick={() => { setDefaultStatusId(null); setDrawerOpen(true); }} size="sm">
         <Plus size={12} /> New Task
       </Button>
     </>
   );
 
+  const totalCount = view === 'list' 
+    ? data?.total 
+    : data?.reduce?.((sum, col) => sum + (col.tasks?.length || 0), 0);
+
   return (
-    <PageLayout title="Tasks" count={view === 'list' ? data?.total : undefined} actions={headerActions}>
+    <PageLayout title="Tasks" count={totalCount} actions={headerActions} tabs={viewTabs}>
 
       {isLoading ? (
         <div className="text-[12px]" style={{ color: 'var(--text-tertiary)' }}>Loading…</div>

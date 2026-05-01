@@ -19,6 +19,8 @@ import EmployeesPage from './pages/employees/EmployeesPage.jsx';
 import EmployeeFormPage from './pages/employees/EmployeeFormPage.jsx';
 import EmployeeDetailPage from './pages/employees/EmployeeDetailPage.jsx';
 import SettingsPage from './pages/settings/SettingsPage.jsx';
+import LeadSettingsLayout from './pages/settings/LeadSettingsLayout.jsx';
+import TaskSettingsLayout from './pages/settings/TaskSettingsLayout.jsx';
 import LeadStatusesPage from './pages/settings/LeadStatusesPage.jsx';
 import TaskStatusesPage from './pages/settings/TaskStatusesPage.jsx';
 import CategoriesPage from './pages/settings/CategoriesPage.jsx';
@@ -60,10 +62,14 @@ export default function App() {
         <Route path="employees/:id" element={<EmployeeDetailPage />} />
 
         <Route path="settings" element={<SettingsPage />}>
-          <Route path="lead-statuses" element={<LeadStatusesPage />} />
-          <Route path="task-statuses" element={<TaskStatusesPage />} />
-          <Route path="categories" element={<CategoriesPage />} />
-          <Route path="tags" element={<TagsPage />} />
+          <Route path="leads" element={<LeadSettingsLayout />}>
+            <Route index element={<CategoriesPage />} />
+            <Route path="statuses" element={<LeadStatusesPage />} />
+            <Route path="tags" element={<TagsPage />} />
+          </Route>
+          <Route path="tasks" element={<TaskSettingsLayout />}>
+            <Route index element={<TaskStatusesPage />} />
+          </Route>
         </Route>
       </Route>
 
