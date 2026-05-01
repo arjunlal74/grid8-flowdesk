@@ -58,6 +58,33 @@ function PersonCard({ icon: Icon, label, name }) {
   );
 }
 
+function AssigneesCard({ assignees }) {
+  return (
+    <div className="flex flex-col gap-1.5 p-3 rounded-xl"
+      style={{ background: 'var(--bg-surface-2)', border: '1px solid var(--border-subtle)' }}>
+      <div className="flex items-center gap-1.5">
+        <User size={11} style={{ color: 'var(--text-tertiary)' }} />
+        <span className="text-[10.5px] font-semibold uppercase tracking-wider"
+          style={{ color: 'var(--text-tertiary)' }}>Assignees</span>
+      </div>
+      {assignees?.length ? (
+        <div className="flex flex-col gap-1">
+          {assignees.map(a => (
+            <div key={a.employee.id} className="flex items-center gap-2">
+              <Avatar name={a.employee.fullName} size="xs" />
+              <span className="text-[12.5px] font-medium" style={{ color: 'var(--text-primary)' }}>
+                {a.employee.fullName}
+              </span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <span className="text-[12.5px]" style={{ color: 'var(--text-disabled)' }}>—</span>
+      )}
+    </div>
+  );
+}
+
 export default function TaskDetailDrawer({ taskId, onClose }) {
   const open = !!taskId;
   const qc = useQueryClient();
@@ -221,7 +248,7 @@ export default function TaskDetailDrawer({ taskId, onClose }) {
                     <p className="text-[10.5px] font-semibold uppercase tracking-wider mb-2"
                       style={{ color: 'var(--text-tertiary)' }}>People</p>
                     <div className="grid grid-cols-2 gap-2">
-                      <PersonCard icon={User} label="Assignee" name={task.assignee?.fullName} />
+                      <AssigneesCard assignees={task.assignees} />
                       <PersonCard icon={User} label="Creator" name={task.creator?.fullName} />
                     </div>
                   </div>

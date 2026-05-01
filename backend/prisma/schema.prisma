@@ -25,7 +25,7 @@ model Employee {
   updatedAt     DateTime  @updatedAt
 
   ownedLeads      Lead[]          @relation("LeadOwner")
-  assignedTasks   Task[]          @relation("TaskAssignee")
+  taskAssignments TaskAssignee[]
   createdTasks    Task[]          @relation("TaskCreator")
   managedProjects Project[]       @relation("ProjectManager")
   projectMembers  ProjectMember[]
@@ -187,8 +187,7 @@ model Task {
   project        Project?   @relation(fields: [projectId], references: [id])
   leadId         Int?
   lead           Lead?      @relation(fields: [leadId], references: [id])
-  assigneeId     Int?
-  assignee       Employee?  @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  assignees      TaskAssignee[]
   creatorId      Int
   creator        Employee   @relation("TaskCreator", fields: [creatorId], references: [id])
   dueDate        DateTime?
@@ -207,6 +206,17 @@ model Task {
   activities  ActivityLog[]
   comments    Comment[]
   attachments Attachment[]
+}
+
+model TaskAssignee {
+  taskId     Int
+  employeeId Int
+  assignedAt DateTime @default(now())
+  task       Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, employeeId])
+  @@index([employeeId])
 }
 
 model TaskStatus {

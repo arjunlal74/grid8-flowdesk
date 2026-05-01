@@ -51,7 +51,7 @@ export const show = async (req, res, next) => {
   try {
     const lead = await prisma.lead.findUnique({
       where: { id: parseInt(req.params.id) },
-      include: { ...leadInclude, tasks: { include: { status: true, assignee: { select: { id: true, fullName: true, avatarUrl: true } } } } },
+      include: { ...leadInclude, tasks: { include: { status: true, assignees: { include: { employee: { select: { id: true, fullName: true, avatarUrl: true } } } } } } },
     });
     if (!lead) return res.status(404).json({ error: 'Not found' });
     if (req.user.role === 'MEMBER' && lead.ownerId !== req.user.id) {

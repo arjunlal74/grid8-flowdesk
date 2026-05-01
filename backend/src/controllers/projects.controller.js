@@ -21,7 +21,7 @@ export const show = async (req, res, next) => {
   try {
     const project = await prisma.project.findUnique({
       where: { id: parseInt(req.params.id) },
-      include: { ...projectInclude, tasks: { include: { status: true, assignee: { select: { id: true, fullName: true, avatarUrl: true } } } } },
+      include: { ...projectInclude, tasks: { include: { status: true, assignees: { include: { employee: { select: { id: true, fullName: true, avatarUrl: true } } } } } } },
     });
     if (!project) return res.status(404).json({ error: 'Not found' });
     res.json(project);

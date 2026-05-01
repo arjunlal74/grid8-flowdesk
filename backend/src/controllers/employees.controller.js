@@ -6,7 +6,7 @@ const employeeSelect = {
   id: true, fullName: true, email: true, phone: true,
   role: true, designation: true, department: true, avatarUrl: true,
   isActive: true, joinedAt: true, lastLoginAt: true, createdAt: true,
-  _count: { select: { assignedTasks: { where: { isArchived: false, status: { isDone: false } } } } },
+  _count: { select: { taskAssignments: { where: { task: { isArchived: false, status: { isDone: false } } } } } },
 };
 
 export const index = async (req, res, next) => {

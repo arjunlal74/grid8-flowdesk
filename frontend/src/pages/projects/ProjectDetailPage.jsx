@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getProject } from '../../api/projects.api.js';
 import Badge, { PriorityBadge } from '../../components/ui/Badge.jsx';
 import Avatar from '../../components/ui/Avatar.jsx';
+import AvatarGroup from '../../components/ui/AvatarGroup.jsx';
 
 export default function ProjectDetailPage() {
   const { id } = useParams();
@@ -55,7 +56,9 @@ export default function ProjectDetailPage() {
                   <Badge color={task.status?.color}>{task.status?.name}</Badge>
                   <span className={`text-[13px] flex-1 ${task.status?.isDone ? 'line-through text-text-tertiary' : 'text-text-primary'}`}>{task.title}</span>
                   <PriorityBadge priority={task.priority} />
-                  {task.assignee && <Avatar name={task.assignee.fullName} size="xs" />}
+                  {task.assignees?.length > 0 && (
+                    <AvatarGroup people={task.assignees.map(a => a.employee)} max={3} size="xs" />
+                  )}
                 </div>
               ))}
             </div>

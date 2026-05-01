@@ -5,6 +5,7 @@ import { getEmployees } from '../../api/employees.api.js';
 import Drawer from '../ui/Drawer.jsx';
 import Badge from '../ui/Badge.jsx';
 import Avatar from '../ui/Avatar.jsx';
+import AvatarGroup from '../ui/AvatarGroup.jsx';
 import { CalendarDays, Users, CheckSquare, Plus, X, Pencil } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -338,7 +339,9 @@ export default function ProjectDetailDrawer({ projectId, open, onClose }) {
                             }}>
                             {task.title}
                           </span>
-                          {task.assignee && <Avatar name={task.assignee.fullName} size="xs" />}
+                          {task.assignees?.length > 0 && (
+                            <AvatarGroup people={task.assignees.map(a => a.employee)} max={3} size="xs" />
+                          )}
                         </div>
                       ))}
                     </div>

@@ -1,4 +1,4 @@
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -8,6 +8,7 @@ import { getEmployees } from '../../api/employees.api.js';
 import { getProjects } from '../../api/projects.api.js';
 import Drawer from '../ui/Drawer.jsx';
 import Button from '../ui/Button.jsx';
+import AssigneeMultiSelect from '../ui/AssigneeMultiSelect.jsx';
 import toast from 'react-hot-toast';
 
 const schema = z.object({
@@ -16,7 +17,7 @@ const schema = z.object({
   statusId: z.coerce.number().int().positive('Required'),
   priority: z.string().default('MEDIUM'),
   projectId: z.coerce.number().int().positive().optional(),
-  assigneeId: z.coerce.number().int().positive().optional(),
+  assigneeIds: z.array(z.number()).optional(),
   dueDate: z.string().optional(),
   estimatedHours: z.coerce.number().optional(),
 });
@@ -56,11 +57,12 @@ export default function NewTaskDrawer({ open, onClose, defaultStatusId }) {
   const { data: employees } = useQuery({ queryKey: ['employees'], queryFn: getEmployees });
   const { data: projects } = useQuery({ queryKey: ['projects'], queryFn: getProjects });
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm({
+  const { register, handleSubmit, reset, control, formState: { errors } } = useForm({
     resolver: zodResolver(schema),
     defaultValues: {
       statusId: defaultStatusId || '',
       priority: 'MEDIUM',
+      assigneeIds: [],
     },
   });
 
@@ -113,12 +115,21 @@ export default function NewTaskDrawer({ open, onClose, defaultStatusId }) {
                 {projects?.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
             </Field>
-            <Field label="Assignee">
-              <select style={fieldStyle} {...register('assigneeId')}>
-                <option value="">Assign to me</option>
-                {employees?.map(e => <option key={e.id} value={e.id}>{e.fullName}</option>)}
-              </select>
-            </Field>
+            <div className="col-span-2">
+              <Field label="Assignees">
+                <Controller
+                  control={control}
+                  name="assigneeIds"
+                  render={({ field }) => (
+                    <AssigneeMultiSelect
+                      employees={employees || []}
+                      value={field.value || []}
+                      onChange={field.onChange}
+                    />
+                  )}
+                />
+              </Field>
+            </div>
           </div>
         </div>
 

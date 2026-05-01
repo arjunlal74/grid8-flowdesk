@@ -3,6 +3,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { MessageSquare, Calendar } from 'lucide-react';
 import Badge, { PriorityBadge } from '../ui/Badge.jsx';
 import Avatar from '../ui/Avatar.jsx';
+import AvatarGroup from '../ui/AvatarGroup.jsx';
 import { Link } from 'react-router-dom';
 
 export default function KanbanCard({ item, type = 'lead', onCardClick }) {
@@ -51,8 +52,9 @@ export default function KanbanCard({ item, type = 'lead', onCardClick }) {
 
       <div className="flex items-center justify-between mt-1.5">
         <div className="flex items-center gap-1.5">
-          {(item.owner || item.assignee) && (
-            <Avatar name={item.owner?.fullName || item.assignee?.fullName} size="xs" />
+          {item.owner && <Avatar name={item.owner.fullName} size="xs" />}
+          {item.assignees?.length > 0 && (
+            <AvatarGroup people={item.assignees.map(a => a.employee)} max={3} size="xs" />
           )}
         </div>
         <div className="flex items-center gap-2">

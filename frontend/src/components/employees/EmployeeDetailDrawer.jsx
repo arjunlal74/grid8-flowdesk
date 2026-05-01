@@ -124,7 +124,7 @@ export default function EmployeeDetailDrawer({ employeeId, open, onClose }) {
             <div className="grid grid-cols-2 gap-4">
               <DetailRow label="Designation" value={emp.designation} />
               <DetailRow label="Department" value={emp.department} />
-              <DetailRow label="Open Tasks" value={emp._count?.assignedTasks ?? 0} />
+              <DetailRow label="Open Tasks" value={emp._count?.taskAssignments ?? 0} />
             </div>
           </div>
 

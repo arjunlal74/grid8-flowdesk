@@ -5,6 +5,7 @@ import { getTasks, moveTask } from '../../api/tasks.api.js';
 import KanbanBoard from '../../components/kanban/KanbanBoard.jsx';
 import Badge, { PriorityBadge } from '../../components/ui/Badge.jsx';
 import Avatar from '../../components/ui/Avatar.jsx';
+import AvatarGroup from '../../components/ui/AvatarGroup.jsx';
 import Pagination from '../../components/ui/Pagination.jsx';
 import Button from '../../components/ui/Button.jsx';
 import NewTaskDrawer from '../../components/tasks/NewTaskDrawer.jsx';
@@ -77,7 +78,7 @@ export default function TasksPage() {
           <table className="w-full">
             <thead>
               <tr style={{ borderBottom: '1px solid var(--border-subtle)' }}>
-                {['Title', 'Project', 'Assignee', 'Status', 'Priority', 'Due Date', 'Actions'].map(h => (
+                {['Title', 'Project', 'Assignees', 'Status', 'Priority', 'Due Date', 'Actions'].map(h => (
                   <th key={h} className="text-left px-4 py-2.5 text-[11px] font-medium"
                     style={{ color: 'var(--text-tertiary)' }}>{h}</th>
                 ))}
@@ -105,10 +106,14 @@ export default function TasksPage() {
                     ) : <span style={{ color: 'var(--text-disabled)' }}>—</span>}
                   </td>
                   <td className="px-4 py-3">
-                    {task.assignee ? (
+                    {task.assignees?.length ? (
                       <div className="flex items-center gap-2">
-                        <Avatar name={task.assignee.fullName} size="xs" />
-                        <span className="text-[12px]" style={{ color: 'var(--text-secondary)' }}>{task.assignee.fullName}</span>
+                        <AvatarGroup people={task.assignees.map(a => a.employee)} max={3} size="xs" />
+                        {task.assignees.length === 1 && (
+                          <span className="text-[12px]" style={{ color: 'var(--text-secondary)' }}>
+                            {task.assignees[0].employee.fullName}
+                          </span>
+                        )}
                       </div>
                     ) : <span style={{ color: 'var(--text-disabled)' }}>—</span>}
                   </td>

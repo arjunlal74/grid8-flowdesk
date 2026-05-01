@@ -4,7 +4,7 @@ import { logActivity } from '../services/activity.service.js';
 const taskInclude = {
   status: true,
   project: { select: { id: true, name: true, color: true } },
-  assignee: { select: { id: true, fullName: true, avatarUrl: true } },
+  assignees: { include: { employee: { select: { id: true, fullName: true, avatarUrl: true } } } },
   creator: { select: { id: true, fullName: true, avatarUrl: true } },
   lead: { select: { id: true, contactName: true } },
   subtasks: { include: { status: true } },
@@ -15,11 +15,14 @@ export const index = async (req, res, next) => {
     const { view = 'list', project, assignee, priority, search, page = 1, limit = 25 } = req.query;
     const where = { isArchived: false };
     if (project) where.projectId = parseInt(project);
-    if (assignee) where.assigneeId = parseInt(assignee);
+    if (assignee) where.assignees = { some: { employeeId: parseInt(assignee) } };
     if (priority) where.priority = priority;
     if (search) where.title = { contains: search };
     if (req.user.role === 'MEMBER') {
-      where.OR = [{ assigneeId: req.user.id }, { creatorId: req.user.id }];
+      where.OR = [
+        { assignees: { some: { employeeId: req.user.id } } },
+        { creatorId: req.user.id },
+      ];
     }
 
     if (view === 'kanban') {
@@ -59,8 +62,14 @@ export const show = async (req, res, next) => {
 
 export const create = async (req, res, next) => {
   try {
+    const { assigneeIds, ...rest } = req.body;
+    const ids = assigneeIds && assigneeIds.length > 0 ? assigneeIds : [req.user.id];
     const task = await prisma.task.create({
-      data: { ...req.body, creatorId: req.user.id, assigneeId: req.body.assigneeId || req.user.id },
+      data: {
+        ...rest,
+        creatorId: req.user.id,
+        assignees: { create: ids.map(employeeId => ({ employeeId: parseInt(employeeId) })) },
+      },
       include: taskInclude,
     });
     await logActivity({ actorId: req.user.id, entityType: 'Task', entityId: task.id, action: 'created', taskId: task.id });
@@ -74,17 +83,28 @@ export const update = async (req, res, next) => {
     const existing = await prisma.task.findUnique({ where: { id } });
     if (!existing) return res.status(404).json({ error: 'Not found' });
 
+    const { assigneeIds, ...rest } = req.body;
     const changes = {};
-    if (req.body.statusId && req.body.statusId !== existing.statusId) {
+    if (rest.statusId && rest.statusId !== existing.statusId) {
       const [from, to] = await Promise.all([
         prisma.taskStatus.findUnique({ where: { id: existing.statusId } }),
-        prisma.taskStatus.findUnique({ where: { id: req.body.statusId } }),
+        prisma.taskStatus.findUnique({ where: { id: rest.statusId } }),
       ]);
       changes.status = { from: from?.name, to: to?.name };
     }
 
     const task = await prisma.task.update({
-      where: { id }, data: req.body, include: taskInclude,
+      where: { id },
+      data: {
+        ...rest,
+        ...(assigneeIds !== undefined && {
+          assignees: {
+            deleteMany: {},
+            create: assigneeIds.map(employeeId => ({ employeeId: parseInt(employeeId) })),
+          },
+        }),
+      },
+      include: taskInclude,
     });
 
     if (Object.keys(changes).length > 0) {

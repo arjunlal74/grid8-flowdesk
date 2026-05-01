@@ -138,8 +138,20 @@ export default function TaskDetailPage() {
         <div className="col-span-4">
           <div className="bg-bg-surface border rounded-card p-5 space-y-3 text-[13px]">
             <h3 className="text-[14px] font-semibold text-text-primary mb-3">Details</h3>
+            {task.assignees?.length > 0 && (
+              <div className="flex justify-between gap-2 items-start">
+                <span className="text-text-tertiary">Assignees</span>
+                <div className="flex flex-col items-end gap-1">
+                  {task.assignees.map(a => (
+                    <div key={a.employee.id} className="flex items-center gap-1.5">
+                      <Avatar name={a.employee.fullName} size="xs" />
+                      <span className="text-text-primary font-medium">{a.employee.fullName}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             {[
-              ['Assignee', task.assignee?.fullName],
               ['Creator', task.creator?.fullName],
               ['Lead', task.lead?.contactName],
               ['Created', new Date(task.createdAt).toLocaleDateString('en-IN')],

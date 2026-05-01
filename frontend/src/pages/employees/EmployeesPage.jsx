@@ -63,7 +63,7 @@ export default function EmployeesPage() {
                     <Badge color={emp.isActive ? '#4ADE80' : '#6B6B6B'}>{emp.isActive ? 'Active' : 'Inactive'}</Badge>
                   </td>
                   <td className="px-4 py-3 text-[12px]" style={{ color: 'var(--text-secondary)' }}>
-                    {emp._count?.assignedTasks ?? 0}
+                    {emp._count?.taskAssignments ?? 0}
                   </td>
                   <td className="px-4 py-3">
                     <button

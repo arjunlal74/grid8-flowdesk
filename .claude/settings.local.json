@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(docker compose *)",
+      "Bash(docker exec grid8_backend *)",
+      "Bash(curl *)",
+      "Bash(python -c \"import sys,json;d=json.load\\(sys.stdin\\);print\\('total=',d.get\\('total'\\)\\);[print\\(t['id'],t['title'],'assignees=',[a['employee']['fullName'] for a in t.get\\('assignees',[]\\)]\\) for t in d.get\\('data',[]\\)[:5]]\")",
+      "Bash(python -c \"import sys,json;print\\(json.load\\(sys.stdin\\)['token']\\)\")",
+      "Bash(python -c \"import sys,json;d=json.load\\(sys.stdin\\);[print\\(e['id'],e['fullName'],'open=',e.get\\('_count',{}\\).get\\('taskAssignments'\\)\\) for e in d]\")",
+      "Bash(python -c \"import sys,json;t=json.load\\(sys.stdin\\);print\\('id=',t.get\\('id'\\),'title=',t.get\\('title'\\),'assignees=',[a['employee']['fullName'] for a in t.get\\('assignees',[]\\)]\\)\")",
+      "Bash(python -c \"import sys,json;t=json.load\\(sys.stdin\\);print\\('assignees=',[a['employee']['fullName'] for a in t.get\\('assignees',[]\\)]\\)\")",
+      "Bash(python -c \"import sys,json;d=json.load\\(sys.stdin\\);print\\('total=',d.get\\('total'\\)\\);[print\\(t['id'],t['title'],'assignees=',[a['employee']['fullName'] for a in t.get\\('assignees',[]\\)]\\) for t in d.get\\('data',[]\\)]\")"
+    ]
+  }
+}

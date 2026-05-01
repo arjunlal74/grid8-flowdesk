@@ -49,7 +49,7 @@ export default function EmployeeDetailPage() {
             ['Email', emp.email],
             ['Phone', emp.phone],
             ['Department', emp.department],
-            ['Open Tasks', emp._count?.assignedTasks ?? 0],
+            ['Open Tasks', emp._count?.taskAssignments ?? 0],
             ['Joined', emp.joinedAt ? new Date(emp.joinedAt).toLocaleDateString('en-IN') : null],
             ['Last Login', emp.lastLoginAt ? new Date(emp.lastLoginAt).toLocaleString() : 'Never'],
           ].map(([k, v]) => v !== null && v !== undefined ? (

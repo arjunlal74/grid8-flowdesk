@@ -1,4 +1,4 @@
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -9,6 +9,7 @@ import { getEmployees } from '../../api/employees.api.js';
 import { getProjects } from '../../api/projects.api.js';
 import Input, { Select, Textarea } from '../../components/ui/Input.jsx';
 import Button from '../../components/ui/Button.jsx';
+import AssigneeMultiSelect from '../../components/ui/AssigneeMultiSelect.jsx';
 import toast from 'react-hot-toast';
 
 const schema = z.object({
@@ -17,7 +18,7 @@ const schema = z.object({
   statusId: z.coerce.number().int().positive('Required'),
   priority: z.string().default('MEDIUM'),
   projectId: z.coerce.number().int().positive().optional(),
-  assigneeId: z.coerce.number().int().positive().optional(),
+  assigneeIds: z.array(z.number()).optional(),
   dueDate: z.string().optional(),
   estimatedHours: z.coerce.number().optional(),
 });
@@ -31,9 +32,9 @@ export default function TaskFormPage() {
   const { data: employees } = useQuery({ queryKey: ['employees'], queryFn: getEmployees });
   const { data: projects } = useQuery({ queryKey: ['projects'], queryFn: getProjects });
 
-  const { register, handleSubmit, formState: { errors } } = useForm({
+  const { register, handleSubmit, control, formState: { errors } } = useForm({
     resolver: zodResolver(schema),
-    defaultValues: { statusId: defaultStatusId ? parseInt(defaultStatusId) : undefined, priority: 'MEDIUM' },
+    defaultValues: { statusId: defaultStatusId ? parseInt(defaultStatusId) : undefined, priority: 'MEDIUM', assigneeIds: [] },
   });
 
   const { mutate, isPending } = useMutation({
@@ -68,10 +69,20 @@ export default function TaskFormPage() {
             <option value="">No project</option>
             {projects?.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           </Select>
-          <Select label="Assignee" {...register('assigneeId')}>
-            <option value="">Assign to me</option>
-            {employees?.map(e => <option key={e.id} value={e.id}>{e.fullName}</option>)}
-          </Select>
+          <div className="col-span-2">
+            <label className="block text-[12px] mb-1.5" style={{ color: 'var(--text-tertiary)' }}>Assignees</label>
+            <Controller
+              control={control}
+              name="assigneeIds"
+              render={({ field }) => (
+                <AssigneeMultiSelect
+                  employees={employees || []}
+                  value={field.value || []}
+                  onChange={field.onChange}
+                />
+              )}
+            />
+          </div>
           <Input label="Due Date" type="date" {...register('dueDate')} />
           <Input label="Estimated Hours" type="number" step="0.5" {...register('estimatedHours')} />
           <div className="col-span-2">
