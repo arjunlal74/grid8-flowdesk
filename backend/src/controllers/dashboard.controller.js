@@ -87,6 +87,107 @@ export const getActivity = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+// Employee personal dashboard
+export const getMyDashboard = async (req, res, next) => {
+  try {
+    const userId = req.user.id;
+    const now = new Date();
+    const today = new Date(now); today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today); tomorrow.setDate(tomorrow.getDate() + 1);
+    // Week starts Monday
+    const dow = today.getDay() === 0 ? 6 : today.getDay() - 1;
+    const weekStart = new Date(today); weekStart.setDate(weekStart.getDate() - dow);
+    const weekEnd = new Date(weekStart); weekEnd.setDate(weekEnd.getDate() + 7);
+
+    const [todayTasks, activeProjects, weekPunches, priorityTasks, myProjects] = await Promise.all([
+      prisma.task.count({
+        where: {
+          isArchived: false,
+          status: { isDone: false },
+          assignees: { some: { employeeId: userId } },
+        },
+      }),
+      prisma.project.count({
+        where: {
+          status: 'ACTIVE',
+          OR: [{ managerId: userId }, { members: { some: { employeeId: userId } } }],
+        },
+      }),
+      prisma.attendancePunch.findMany({
+        where: { employeeId: userId, checkInAt: { gte: weekStart, lt: weekEnd } },
+        orderBy: { checkInAt: 'asc' },
+      }),
+      prisma.task.findMany({
+        where: {
+          isArchived: false,
+          status: { isDone: false },
+          assignees: { some: { employeeId: userId } },
+        },
+        include: {
+          status: true,
+          project: { select: { id: true, name: true, color: true } },
+        },
+        orderBy: [{ priority: 'desc' }, { dueDate: 'asc' }],
+        take: 6,
+      }),
+      prisma.project.findMany({
+        where: {
+          status: { in: ['ACTIVE', 'PLANNING'] },
+          OR: [{ managerId: userId }, { members: { some: { employeeId: userId } } }],
+        },
+        include: {
+          _count: { select: { tasks: true } },
+          tasks: { select: { status: { select: { isDone: true } } } },
+        },
+        orderBy: { updatedAt: 'desc' },
+        take: 6,
+      }),
+    ]);
+
+    // Weekly activity: hours per day Mon-Sun
+    const weekDays = Array.from({ length: 7 }).map((_, i) => {
+      const d = new Date(weekStart); d.setDate(d.getDate() + i);
+      return { date: d, label: d.toLocaleDateString('en-IN', { weekday: 'short' }), minutes: 0 };
+    });
+    for (const p of weekPunches) {
+      if (!p.checkOutAt) continue;
+      const inDay = new Date(p.checkInAt); inDay.setHours(0, 0, 0, 0);
+      const idx = Math.floor((inDay - weekStart) / 86400000);
+      if (idx < 0 || idx > 6) continue;
+      const sameDay = inDay.getTime() === new Date(p.checkOutAt).setHours(0, 0, 0, 0);
+      if (sameDay) {
+        weekDays[idx].minutes += Math.max(0, Math.round((new Date(p.checkOutAt) - new Date(p.checkInAt)) / 60000));
+      } else {
+        const endOfInDay = new Date(inDay); endOfInDay.setHours(23, 59, 59, 999);
+        weekDays[idx].minutes += Math.max(0, Math.round((endOfInDay - new Date(p.checkInAt)) / 60000));
+      }
+    }
+    const weeklyActivity = weekDays.map(d => ({ label: d.label, hours: +(d.minutes / 60).toFixed(1) }));
+    const weeklyHours = +(weekDays.reduce((s, d) => s + d.minutes, 0) / 60).toFixed(1);
+
+    const recentProjects = myProjects.map(p => {
+      const total = p.tasks.length;
+      const done = p.tasks.filter(t => t.status?.isDone).length;
+      return {
+        id: p.id, name: p.name, color: p.color, status: p.status, endDate: p.endDate,
+        progress: total > 0 ? Math.round((done / total) * 100) : 0,
+      };
+    });
+
+    res.json({
+      todayTasks,
+      activeProjects,
+      weeklyHours,
+      weeklyActivity,
+      priorityTasks: priorityTasks.map(t => ({
+        id: t.id, title: t.title, priority: t.priority, dueDate: t.dueDate,
+        status: t.status, project: t.project,
+      })),
+      recentProjects,
+    });
+  } catch (err) { next(err); }
+};
+
 export const getChart = async (req, res, next) => {
   try {
     const { metric = 'leads', range = '7d' } = req.query;

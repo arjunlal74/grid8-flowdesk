@@ -25,12 +25,39 @@ export default function LeadsPage() {
 
   const { mutate: moveLeadMutation } = useMutation({
     mutationFn: ({ id, data }) => moveLead(id, data),
-    onSuccess: () => { qc.invalidateQueries({ queryKey: ['leads'] }); toast.success('Lead moved'); },
+    onMutate: async ({ id, data: moveData }) => {
+      await qc.cancelQueries({ queryKey: ['leads'] });
+      const snapshots = qc.getQueriesData({ queryKey: ['leads'] });
+      qc.setQueriesData({ queryKey: ['leads'] }, (old) => {
+        if (!Array.isArray(old)) return old;
+        let moved = null;
+        const stripped = old.map(col => {
+          const items = col.leads || [];
+          const found = items.find(l => l.id === id);
+          if (found) moved = found;
+          return { ...col, leads: items.filter(l => l.id !== id) };
+        });
+        if (!moved) return old;
+        return stripped.map(col => {
+          if (col.id !== moveData.statusId) return col;
+          const { leads: _l, tasks: _t, ...statusObj } = col;
+          const updated = { ...moved, statusId: moveData.statusId, status: statusObj };
+          return { ...col, leads: [...(col.leads || []), updated] };
+        });
+      });
+      return { snapshots };
+    },
+    onError: (_err, _vars, ctx) => {
+      ctx?.snapshots?.forEach(([key, data]) => qc.setQueryData(key, data));
+      toast.error('Failed to move lead');
+    },
+    onSuccess: () => toast.success('Lead moved'),
+    onSettled: () => qc.invalidateQueries({ queryKey: ['leads'] }),
   });
 
   const viewTabs = (
     <div className="flex items-center gap-5">
-      {[{ v: 'kanban', label: 'Board', I: LayoutGrid }, { v: 'list', label: 'List', I: List }].map(({ v, label, I }) => (
+      {[{ v: 'list', label: 'List', I: List }, { v: 'kanban', label: 'Board', I: LayoutGrid }].map(({ v, label, I }) => (
         <button key={v} onClick={() => setView(v)}
           className="flex items-center gap-1.5 pb-1 relative transition-colors"
           style={{ 

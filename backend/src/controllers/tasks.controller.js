@@ -1,13 +1,20 @@
 import prisma from '../config/db.js';
 import { logActivity } from '../services/activity.service.js';
 
+const subtaskAssigneeSelect = {
+  include: { employee: { select: { id: true, fullName: true, avatarUrl: true } } },
+};
+
 const taskInclude = {
   status: true,
   project: { select: { id: true, name: true, color: true } },
   assignees: { include: { employee: { select: { id: true, fullName: true, avatarUrl: true } } } },
   creator: { select: { id: true, fullName: true, avatarUrl: true } },
   lead: { select: { id: true, contactName: true } },
-  subtasks: { include: { status: true } },
+  subtasks: {
+    orderBy: [{ position: 'asc' }, { id: 'asc' }],
+    include: { assignees: subtaskAssigneeSelect },
+  },
 };
 
 export const index = async (req, res, next) => {
@@ -176,5 +183,67 @@ export const addComment = async (req, res, next) => {
     });
     await logActivity({ actorId: req.user.id, entityType: 'Task', entityId: taskId, action: 'commented', taskId });
     res.status(201).json(comment);
+  } catch (err) { next(err); }
+};
+
+// ---------- Subtasks ----------
+
+export const addSubtask = async (req, res, next) => {
+  try {
+    const taskId = parseInt(req.params.id);
+    const { title, assigneeIds = [] } = req.body;
+
+    const last = await prisma.subtask.findFirst({
+      where: { taskId },
+      orderBy: { position: 'desc' },
+      select: { position: true },
+    });
+    const position = (last?.position ?? -1) + 1;
+
+    const subtask = await prisma.subtask.create({
+      data: {
+        taskId,
+        title,
+        position,
+        assignees: assigneeIds.length ? { create: assigneeIds.map((employeeId) => ({ employeeId })) } : undefined,
+      },
+      include: { assignees: subtaskAssigneeSelect },
+    });
+    res.status(201).json(subtask);
+  } catch (err) { next(err); }
+};
+
+export const updateSubtask = async (req, res, next) => {
+  try {
+    const id = parseInt(req.params.subtaskId);
+    const { title, isDone, assigneeIds } = req.body;
+
+    const data = {};
+    if (typeof title === 'string') data.title = title;
+    if (typeof isDone === 'boolean') {
+      data.isDone = isDone;
+      data.completedAt = isDone ? new Date() : null;
+    }
+    if (Array.isArray(assigneeIds)) {
+      data.assignees = {
+        deleteMany: {},
+        create: assigneeIds.map((employeeId) => ({ employeeId })),
+      };
+    }
+
+    const subtask = await prisma.subtask.update({
+      where: { id },
+      data,
+      include: { assignees: subtaskAssigneeSelect },
+    });
+    res.json(subtask);
+  } catch (err) { next(err); }
+};
+
+export const deleteSubtask = async (req, res, next) => {
+  try {
+    const id = parseInt(req.params.subtaskId);
+    await prisma.subtask.delete({ where: { id } });
+    res.status(204).end();
   } catch (err) { next(err); }
 };

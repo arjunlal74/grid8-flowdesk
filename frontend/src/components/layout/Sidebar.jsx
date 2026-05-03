@@ -1,20 +1,30 @@
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Users, CheckSquare, FolderKanban,
-  Briefcase, Settings, Grid2X2
+  Briefcase, Settings, Grid2X2, CalendarClock
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore.js';
 
-const navItems = [
+const adminNav = [
   { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { to: '/leads', icon: Users, label: 'Leads' },
   { to: '/tasks', icon: CheckSquare, label: 'Tasks' },
   { to: '/projects', icon: FolderKanban, label: 'Projects' },
   { to: '/employees', icon: Briefcase, label: 'Employees' },
+  { to: '/attendance', icon: CalendarClock, label: 'Attendance' },
+];
+
+const memberNav = [
+  { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+  { to: '/leads', icon: Users, label: 'Leads' },
+  { to: '/tasks', icon: CheckSquare, label: 'Tasks' },
+  { to: '/projects', icon: FolderKanban, label: 'Projects' },
+  { to: '/attendance', icon: CalendarClock, label: 'Attendance' },
 ];
 
 export default function Sidebar() {
   const { user } = useAuthStore();
+  const navItems = user?.role === 'ADMIN' ? adminNav : memberNav;
 
   return (
     <aside className="fixed inset-y-0 left-0 w-[220px] flex flex-col z-20"

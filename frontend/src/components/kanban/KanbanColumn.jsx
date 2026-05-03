@@ -3,8 +3,8 @@ import { SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { Plus } from 'lucide-react';
 import KanbanCard from './KanbanCard.jsx';
 
-export default function KanbanColumn({ column, items, type = 'lead', onAddClick, onCardClick }) {
-  const { setNodeRef, isOver } = useDroppable({ id: column.id });
+export default function KanbanColumn({ column, items, type = 'lead', isDragging = false, onAddClick, onCardClick }) {
+  const { setNodeRef, isOver } = useDroppable({ id: `col-${column.id}` });
 
   return (
     <div className="flex-shrink-0 w-64 flex flex-col gap-2">
@@ -26,12 +26,19 @@ export default function KanbanColumn({ column, items, type = 'lead', onAddClick,
         )}
       </div>
 
-      <div ref={setNodeRef} className="flex flex-col gap-1.5 min-h-[60px] p-1.5 rounded-xl transition-colors"
-        style={{ background: isOver ? 'var(--bg-surface-2)' : 'var(--bg-surface)/30' }}>
+      <div ref={setNodeRef} className="flex flex-col gap-1.5 flex-1 min-h-[200px] p-1.5 rounded-xl transition-colors"
+        style={{
+          background: isOver ? `${column.color}14` : isDragging ? 'var(--bg-surface)' : 'transparent',
+          border: isOver
+            ? `1.5px dashed ${column.color}`
+            : isDragging
+              ? '1.5px dashed var(--border-subtle)'
+              : '1.5px dashed transparent',
+        }}>
         <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
           {items.map(item => <KanbanCard key={item.id} item={item} type={type} onCardClick={onCardClick} />)}
         </SortableContext>
-        {items.length === 0 && (
+        {items.length === 0 && !isDragging && (
           <div className="flex items-center justify-center h-14 rounded-lg" style={{ border: '1px dashed var(--border-subtle)' }}>
             <p className="text-[10.5px]" style={{ color: 'var(--text-disabled)' }}>Drop here</p>
           </div>

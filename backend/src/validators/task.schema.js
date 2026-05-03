@@ -10,7 +10,17 @@ export const createTaskSchema = z.object({
   assigneeIds: z.array(z.coerce.number().int().positive()).optional(),
   dueDate: z.coerce.date().optional(),
   estimatedHours: z.coerce.number().nonnegative().optional(),
-  parentTaskId: z.coerce.number().int().positive().optional(),
 });
 
 export const updateTaskSchema = createTaskSchema.partial();
+
+export const subtaskCreateSchema = z.object({
+  title: z.string().min(1).max(200),
+  assigneeIds: z.array(z.coerce.number().int().positive()).optional(),
+});
+
+export const subtaskUpdateSchema = z.object({
+  title: z.string().min(1).max(200).optional(),
+  isDone: z.boolean().optional(),
+  assigneeIds: z.array(z.coerce.number().int().positive()).optional(),
+});

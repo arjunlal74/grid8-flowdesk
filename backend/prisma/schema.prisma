@@ -24,13 +24,15 @@ model Employee {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  ownedLeads      Lead[]          @relation("LeadOwner")
-  taskAssignments TaskAssignee[]
-  createdTasks    Task[]          @relation("TaskCreator")
-  managedProjects Project[]       @relation("ProjectManager")
-  projectMembers  ProjectMember[]
-  activities      ActivityLog[]
-  comments        Comment[]
+  ownedLeads          Lead[]            @relation("LeadOwner")
+  taskAssignments     TaskAssignee[]
+  subtaskAssignments  SubtaskAssignee[]
+  createdTasks        Task[]            @relation("TaskCreator")
+  managedProjects     Project[]         @relation("ProjectManager")
+  projectMembers      ProjectMember[]
+  activities          ActivityLog[]
+  comments            Comment[]
+  attendance          AttendancePunch[]
 }
 
 enum Role {
@@ -196,9 +198,6 @@ model Task {
   estimatedHours Decimal?   @db.Decimal(6, 2)
   actualHours    Decimal?   @db.Decimal(6, 2)
   position       Int        @default(0)
-  parentTaskId   Int?
-  parentTask     Task?      @relation("Subtasks", fields: [parentTaskId], references: [id])
-  subtasks       Task[]     @relation("Subtasks")
   isArchived     Boolean    @default(false)
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
@@ -206,6 +205,33 @@ model Task {
   activities  ActivityLog[]
   comments    Comment[]
   attachments Attachment[]
+  subtasks    Subtask[]
+}
+
+model Subtask {
+  id          Int       @id @default(autoincrement())
+  taskId      Int
+  task        Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  title       String
+  isDone      Boolean   @default(false)
+  position    Int       @default(0)
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  assignees   SubtaskAssignee[]
+
+  @@index([taskId])
+}
+
+model SubtaskAssignee {
+  subtaskId  Int
+  employeeId Int
+  subtask    Subtask  @relation(fields: [subtaskId], references: [id], onDelete: Cascade)
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+
+  @@id([subtaskId, employeeId])
+  @@index([employeeId])
 }
 
 model TaskAssignee {
@@ -275,6 +301,18 @@ model Attachment {
   taskId       Int?
   task         Task?    @relation(fields: [taskId], references: [id], onDelete: Cascade)
   createdAt    DateTime @default(now())
+}
+
+model AttendancePunch {
+  id         Int       @id @default(autoincrement())
+  employeeId Int
+  employee   Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  checkInAt  DateTime
+  checkOutAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@index([employeeId, checkInAt])
 }
 
 model AppSetting {

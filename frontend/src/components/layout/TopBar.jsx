@@ -1,7 +1,10 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Sun, Moon, LogOut } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore.js';
 import { useThemeStore } from '../../store/themeStore.js';
+import Modal from '../ui/Modal.jsx';
+import Button from '../ui/Button.jsx';
 
 function InitialsAvatar({ name }) {
   const initials = name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '?';
@@ -17,6 +20,13 @@ export default function TopBar() {
   const { user, logout } = useAuthStore();
   const { theme, toggle } = useThemeStore();
   const navigate = useNavigate();
+  const [confirmOpen, setConfirmOpen] = useState(false);
+
+  const handleSignOut = () => {
+    setConfirmOpen(false);
+    logout();
+    navigate('/login');
+  };
 
   return (
     <header
@@ -55,7 +65,7 @@ export default function TopBar() {
 
       {/* Sign out */}
       <button
-        onClick={() => { logout(); navigate('/login'); }}
+        onClick={() => setConfirmOpen(true)}
         className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-[12px] transition-colors"
         style={{ color: 'var(--text-secondary)' }}
         onMouseEnter={e => { e.currentTarget.style.background = 'var(--bg-surface-2)'; e.currentTarget.style.color = 'var(--danger)'; }}
@@ -64,6 +74,18 @@ export default function TopBar() {
         <LogOut size={13} strokeWidth={1.8} />
         Sign out
       </button>
+
+      <Modal open={confirmOpen} onClose={() => setConfirmOpen(false)} title="Sign out?" size="sm">
+        <p className="text-[12.5px]" style={{ color: 'var(--text-secondary)' }}>
+          You'll be signed out and returned to the login screen. Any unsaved work in this tab may be lost.
+        </p>
+        <div className="flex items-center justify-end gap-2 mt-5">
+          <Button variant="ghost" size="sm" onClick={() => setConfirmOpen(false)}>Cancel</Button>
+          <Button variant="danger" size="sm" onClick={handleSignOut}>
+            <LogOut size={12} /> Sign out
+          </Button>
+        </div>
+      </Modal>
     </header>
   );
 }

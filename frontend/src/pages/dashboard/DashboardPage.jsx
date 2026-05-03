@@ -6,6 +6,8 @@ import Button from '../../components/ui/Button.jsx';
 import AreaChart from '../../components/charts/AreaChart.jsx';
 import Avatar from '../../components/ui/Avatar.jsx';
 import PageLayout from '../../components/layout/PageLayout.jsx';
+import EmployeeDashboard from './EmployeeDashboard.jsx';
+import { useAuthStore } from '../../store/authStore.js';
 import { Bell, TrendingUp, TrendingDown } from 'lucide-react';
 
 const rangeTabs = [
@@ -47,16 +49,39 @@ function KPICard({ label, value, delta }) {
 }
 
 export default function DashboardPage() {
+  const user = useAuthStore((s) => s.user);
+  const isAdmin = user?.role === 'ADMIN';
+
   const [range, setRange] = useState('7d');
   const [chartMetric, setChartMetric] = useState('leads');
 
-  const { data: stats } = useQuery({ queryKey: ['dashboard-stats', range], queryFn: () => getStats(range) });
-  const { data: pipeline } = useQuery({ queryKey: ['dashboard-pipeline'], queryFn: getPipeline });
-  const { data: activity } = useQuery({ queryKey: ['dashboard-activity'], queryFn: getActivity });
-  const { data: chartData } = useQuery({ queryKey: ['dashboard-chart', chartMetric, range], queryFn: () => getChart(chartMetric, range) });
+  const { data: stats } = useQuery({
+    queryKey: ['dashboard-stats', range],
+    queryFn: () => getStats(range),
+    enabled: isAdmin,
+  });
+  const { data: pipeline } = useQuery({
+    queryKey: ['dashboard-pipeline'],
+    queryFn: getPipeline,
+    enabled: isAdmin,
+  });
+  const { data: activity } = useQuery({
+    queryKey: ['dashboard-activity'],
+    queryFn: getActivity,
+    enabled: isAdmin,
+  });
+  const { data: chartData } = useQuery({
+    queryKey: ['dashboard-chart', chartMetric, range],
+    queryFn: () => getChart(chartMetric, range),
+    enabled: isAdmin,
+  });
 
   const pipelineTotal = pipeline?.reduce((a, r) => a + r.count, 0) || 1;
   const totalValue = pipeline?.reduce((a, r) => a + r.value, 0) || 0;
+
+  if (!isAdmin) {
+    return <EmployeeDashboard />;
+  }
 
   return (
     <PageLayout

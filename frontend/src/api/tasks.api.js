@@ -9,3 +9,7 @@ export const moveTask = (id, data) => api.post(`/tasks/${id}/move`, data).then(r
 export const completeTask = (id) => api.post(`/tasks/${id}/complete`).then(r => r.data);
 export const getTaskComments = (id) => api.get(`/tasks/${id}/comments`).then(r => r.data);
 export const addTaskComment = (id, body) => api.post(`/tasks/${id}/comments`, { body }).then(r => r.data);
+
+export const addSubtask = (taskId, data) => api.post(`/tasks/${taskId}/subtasks`, data).then(r => r.data);
+export const updateSubtask = (taskId, subtaskId, data) => api.patch(`/tasks/${taskId}/subtasks/${subtaskId}`, data).then(r => r.data);
+export const deleteSubtask = (taskId, subtaskId) => api.delete(`/tasks/${taskId}/subtasks/${subtaskId}`).then(r => r.data);

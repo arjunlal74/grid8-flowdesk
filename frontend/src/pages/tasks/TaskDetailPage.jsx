@@ -125,11 +125,12 @@ export default function TaskDetailPage() {
               <div className="space-y-2">
                 {task.subtasks?.map(st => (
                   <div key={st.id} className="flex items-center gap-3 p-3 bg-bg-surface-2 rounded-lg">
-                    <Badge color={st.status?.color}>{st.status?.name}</Badge>
-                    <span className={`text-[13px] flex-1 ${st.status?.isDone ? 'line-through text-text-tertiary' : 'text-text-primary'}`}>{st.title}</span>
+                    <span className={`w-3.5 h-3.5 rounded-full border-[1.5px] flex items-center justify-center flex-shrink-0`}
+                      style={{ background: st.isDone ? 'var(--success)' : 'transparent', borderColor: st.isDone ? 'var(--success)' : 'var(--border-default)' }} />
+                    <span className={`text-[13px] flex-1 ${st.isDone ? 'line-through text-text-tertiary' : 'text-text-primary'}`}>{st.title}</span>
                   </div>
                 ))}
-                {!task.subtasks?.length && <p className="text-[13px] text-text-tertiary">No subtasks</p>}
+                {!task.subtasks?.length && <p className="text-[13px] text-text-tertiary">No subtasks here. Open a task to manage its subtasks in the drawer.</p>}
               </div>
             )}
           </div>
