@@ -1,9 +1,10 @@
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createProject } from '../../api/projects.api.js';
 import { getEmployees } from '../../api/employees.api.js';
 import Drawer from '../ui/Drawer.jsx';
 import Button from '../ui/Button.jsx';
+import AssigneeMultiSelect from '../ui/AssigneeMultiSelect.jsx';
 import toast from 'react-hot-toast';
 
 const fieldStyle = {
@@ -39,12 +40,15 @@ export default function NewProjectDrawer({ open, onClose }) {
   const qc = useQueryClient();
   const { data: employees } = useQuery({ queryKey: ['employees'], queryFn: getEmployees });
 
-  const { register, handleSubmit, reset, formState: { errors } } = useForm({
-    defaultValues: { status: 'ACTIVE', color: '#6366F1' },
+  const { register, handleSubmit, reset, control, formState: { errors } } = useForm({
+    defaultValues: { status: 'ACTIVE', color: '#6366F1', memberIds: [] },
   });
 
   const { mutate, isPending } = useMutation({
-    mutationFn: createProject,
+    mutationFn: (data) => createProject({
+      ...data,
+      memberIds: (data.memberIds || []).map((id) => parseInt(id, 10)),
+    }),
     onSuccess: (p) => {
       toast.success(`Project "${p.name}" created`);
       qc.invalidateQueries({ queryKey: ['projects'] });
@@ -97,6 +101,22 @@ export default function NewProjectDrawer({ open, onClose }) {
               <input type="color" style={{ ...fieldStyle, padding: '4px 8px', height: '34px', cursor: 'pointer' }}
                 {...register('color')} />
             </Field>
+            <div className="col-span-2">
+              <Field label="Members">
+                <Controller
+                  control={control}
+                  name="memberIds"
+                  render={({ field }) => (
+                    <AssigneeMultiSelect
+                      employees={employees || []}
+                      value={field.value || []}
+                      onChange={field.onChange}
+                      placeholder="Add team members"
+                    />
+                  )}
+                />
+              </Field>
+            </div>
           </div>
         </div>
 

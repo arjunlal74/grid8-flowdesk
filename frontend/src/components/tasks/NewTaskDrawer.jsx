@@ -1,10 +1,10 @@
-import { useForm, Controller } from 'react-hook-form';
+import { useEffect, useMemo } from 'react';
+import { useForm, Controller, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { createTask } from '../../api/tasks.api.js';
 import { getTaskStatuses } from '../../api/settings.api.js';
-import { getEmployees } from '../../api/employees.api.js';
 import { getProjects } from '../../api/projects.api.js';
 import Drawer from '../ui/Drawer.jsx';
 import Button from '../ui/Button.jsx';
@@ -16,8 +16,8 @@ const schema = z.object({
   description: z.string().optional(),
   statusId: z.coerce.number().int().positive('Required'),
   priority: z.string().default('MEDIUM'),
-  projectId: z.coerce.number().int().positive().optional(),
-  assigneeIds: z.array(z.number()).optional(),
+  projectId: z.coerce.number().int().positive('Required'),
+  assigneeIds: z.array(z.number()).min(1, 'Required'),
   dueDate: z.string().optional(),
   estimatedHours: z.coerce.number().optional(),
 });
@@ -54,17 +54,52 @@ function SectionLabel({ children }) {
 export default function NewTaskDrawer({ open, onClose, defaultStatusId }) {
   const qc = useQueryClient();
   const { data: statuses } = useQuery({ queryKey: ['task-statuses'], queryFn: getTaskStatuses });
-  const { data: employees } = useQuery({ queryKey: ['employees'], queryFn: getEmployees });
-  const { data: projects } = useQuery({ queryKey: ['projects'], queryFn: getProjects });
+  const { data: projects } = useQuery({
+    queryKey: ['projects'],
+    queryFn: getProjects,
+    refetchOnMount: 'always',
+    enabled: open,
+  });
 
-  const { register, handleSubmit, reset, control, formState: { errors } } = useForm({
+  const { register, handleSubmit, reset, control, setValue, formState: { errors } } = useForm({
     resolver: zodResolver(schema),
     defaultValues: {
+      title: '',
+      description: '',
       statusId: defaultStatusId || '',
       priority: 'MEDIUM',
+      projectId: '',
       assigneeIds: [],
+      dueDate: '',
+      estimatedHours: '',
     },
   });
+
+  const projectIdValue = useWatch({ control, name: 'projectId', defaultValue: '' });
+  const assigneeIdsValue = useWatch({ control, name: 'assigneeIds', defaultValue: [] }) || [];
+
+  const selectedProject = useMemo(() => {
+    if (!projectIdValue || !projects) return null;
+    const targetId = parseInt(projectIdValue, 10);
+    if (Number.isNaN(targetId)) return null;
+    return projects.find((p) => p.id === targetId) || null;
+  }, [projects, projectIdValue]);
+
+  const projectEmployees = useMemo(() => {
+    if (!selectedProject) return [];
+    const byId = new Map();
+    selectedProject.members?.forEach((m) => { if (m.employee) byId.set(m.employee.id, m.employee); });
+    if (selectedProject.manager) byId.set(selectedProject.manager.id, selectedProject.manager);
+    return Array.from(byId.values());
+  }, [selectedProject]);
+
+  useEffect(() => {
+    const allowedIds = new Set(projectEmployees.map((e) => e.id));
+    const filtered = assigneeIdsValue.filter((id) => allowedIds.has(id));
+    if (filtered.length !== assigneeIdsValue.length) {
+      setValue('assigneeIds', filtered, { shouldDirty: true, shouldValidate: true });
+    }
+  }, [projectEmployees, assigneeIdsValue, setValue]);
 
   const { mutate, isPending } = useMutation({
     mutationFn: createTask,
@@ -78,6 +113,21 @@ export default function NewTaskDrawer({ open, onClose, defaultStatusId }) {
   });
 
   const handleClose = () => { reset(); onClose(); };
+
+  useEffect(() => {
+    if (open) {
+      reset({
+        title: '',
+        description: '',
+        statusId: defaultStatusId || '',
+        priority: 'MEDIUM',
+        projectId: '',
+        assigneeIds: [],
+        dueDate: '',
+        estimatedHours: '',
+      });
+    }
+  }, [open, defaultStatusId, reset]);
 
   return (
     <Drawer open={open} onClose={handleClose} title="New Task" subtitle="Add a new task to your workflow" width="460px">
@@ -109,25 +159,39 @@ export default function NewTaskDrawer({ open, onClose, defaultStatusId }) {
                 <option value="URGENT">Urgent</option>
               </select>
             </Field>
-            <Field label="Project">
+            <Field label="Project *" error={errors.projectId?.message}>
               <select style={fieldStyle} {...register('projectId')}>
-                <option value="">No project</option>
+                <option value="">Select a project…</option>
                 {projects?.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
             </Field>
             <div className="col-span-2">
-              <Field label="Assignees">
+              <Field label="Assignees *" error={errors.assigneeIds?.message}>
                 <Controller
                   control={control}
                   name="assigneeIds"
                   render={({ field }) => (
                     <AssigneeMultiSelect
-                      employees={employees || []}
+                      key={selectedProject?.id || 'no-project'}
+                      employees={projectEmployees}
                       value={field.value || []}
                       onChange={field.onChange}
+                      disabled={!selectedProject}
+                      placeholder={
+                        !selectedProject
+                          ? 'Select a project first'
+                          : projectEmployees.length === 0
+                            ? 'This project has no members yet'
+                            : 'Select assignees'
+                      }
                     />
                   )}
                 />
+                {selectedProject && projectEmployees.length === 0 && (
+                  <p className="text-[10.5px] mt-1" style={{ color: 'var(--text-tertiary)' }}>
+                    Add team members to "{selectedProject.name}" from the project page first.
+                  </p>
+                )}
               </Field>
             </div>
           </div>

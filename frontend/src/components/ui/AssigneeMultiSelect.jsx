@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { ChevronDown, X, Check } from 'lucide-react';
 import Avatar from './Avatar.jsx';
 
-export default function AssigneeMultiSelect({ employees = [], value = [], onChange, placeholder = 'Assign to me' }) {
+export default function AssigneeMultiSelect({ employees = [], value = [], onChange, placeholder = 'Assign to me', disabled = false }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const wrapperRef = useRef(null);
@@ -14,6 +14,10 @@ export default function AssigneeMultiSelect({ employees = [], value = [], onChan
     document.addEventListener('mousedown', onDocClick);
     return () => document.removeEventListener('mousedown', onDocClick);
   }, []);
+
+  useEffect(() => {
+    if (disabled && open) setOpen(false);
+  }, [disabled, open]);
 
   const selected = employees.filter(e => value.includes(e.id));
   const filtered = employees.filter(e =>
@@ -31,7 +35,8 @@ export default function AssigneeMultiSelect({ employees = [], value = [], onChan
     <div ref={wrapperRef} className="relative">
       <button
         type="button"
-        onClick={() => setOpen(o => !o)}
+        disabled={disabled}
+        onClick={() => { if (!disabled) setOpen(o => !o); }}
         className="w-full flex items-center gap-1.5 flex-wrap text-left"
         style={{
           background: 'var(--bg-surface-2)',
@@ -41,7 +46,8 @@ export default function AssigneeMultiSelect({ employees = [], value = [], onChan
           padding: selected.length ? '5px 28px 5px 6px' : '7px 28px 7px 12px',
           fontSize: '12.5px',
           minHeight: '34px',
-          cursor: 'pointer',
+          cursor: disabled ? 'not-allowed' : 'pointer',
+          opacity: disabled ? 0.55 : 1,
         }}
       >
         {selected.length === 0 ? (

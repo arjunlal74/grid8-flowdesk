@@ -32,10 +32,12 @@ export const create = async (req, res, next) => {
   try {
     const { memberIds, ...data } = req.body;
     const slug = slugify(data.name);
+    const code = typeof data.code === 'string' && data.code.trim() ? data.code.trim() : null;
     const project = await prisma.project.create({
       data: {
         ...data,
         slug,
+        code,
         managerId: data.managerId ? parseInt(data.managerId) : req.user.id,
         startDate: data.startDate ? new Date(data.startDate) : undefined,
         endDate: data.endDate ? new Date(data.endDate) : undefined,
@@ -45,7 +47,13 @@ export const create = async (req, res, next) => {
     });
     await logActivity({ actorId: req.user.id, entityType: 'Project', entityId: project.id, action: 'created' });
     res.status(201).json(project);
-  } catch (err) { next(err); }
+  } catch (err) {
+    if (err?.code === 'P2002') {
+      const target = Array.isArray(err.meta?.target) ? err.meta.target.join(', ') : err.meta?.target;
+      return res.status(409).json({ error: `Duplicate value for unique field: ${target}` });
+    }
+    next(err);
+  }
 };
 
 export const update = async (req, res, next) => {

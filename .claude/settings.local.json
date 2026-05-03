@@ -11,7 +11,8 @@
       "Bash(python -c \"import sys,json;t=json.load\\(sys.stdin\\);print\\('assignees=',[a['employee']['fullName'] for a in t.get\\('assignees',[]\\)]\\)\")",
       "Bash(python -c \"import sys,json;d=json.load\\(sys.stdin\\);print\\('total=',d.get\\('total'\\)\\);[print\\(t['id'],t['title'],'assignees=',[a['employee']['fullName'] for a in t.get\\('assignees',[]\\)]\\) for t in d.get\\('data',[]\\)]\")",
       "Bash(docker exec *)",
-      "Bash(docker restart *)"
+      "Bash(docker restart *)",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); [print\\(p['id'],p['name'],'mgr:',p['manager'].get\\('fullName'\\) if p['manager'] else None,'members:',[m['employee']['fullName'] for m in p['members']]\\) for p in d]\")"
     ]
   }
 }

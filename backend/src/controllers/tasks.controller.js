@@ -17,6 +17,25 @@ const taskInclude = {
   },
 };
 
+async function assertAssigneesBelongToProject(projectId, assigneeIds) {
+  if (!projectId || !assigneeIds || assigneeIds.length === 0) return null;
+  const pid = parseInt(projectId);
+  const project = await prisma.project.findUnique({
+    where: { id: pid },
+    select: { managerId: true, members: { select: { employeeId: true } } },
+  });
+  if (!project) return 'Project not found';
+  const allowed = new Set(project.members.map(m => m.employeeId));
+  if (project.managerId) allowed.add(project.managerId);
+  const invalid = assigneeIds
+    .map(id => parseInt(id))
+    .filter(id => !allowed.has(id));
+  if (invalid.length > 0) {
+    return `Assignees must belong to the project: ${invalid.join(', ')}`;
+  }
+  return null;
+}
+
 export const index = async (req, res, next) => {
   try {
     const { view = 'list', project, assignee, priority, search, page = 1, limit = 25 } = req.query;
@@ -70,7 +89,13 @@ export const show = async (req, res, next) => {
 export const create = async (req, res, next) => {
   try {
     const { assigneeIds, ...rest } = req.body;
-    const ids = assigneeIds && assigneeIds.length > 0 ? assigneeIds : [req.user.id];
+    if (!rest.projectId) return res.status(400).json({ error: 'Project is required' });
+    if (!assigneeIds || assigneeIds.length === 0) {
+      return res.status(400).json({ error: 'At least one assignee is required' });
+    }
+    const ids = assigneeIds;
+    const validationError = await assertAssigneesBelongToProject(rest.projectId, ids);
+    if (validationError) return res.status(400).json({ error: validationError });
     const task = await prisma.task.create({
       data: {
         ...rest,
@@ -87,10 +112,25 @@ export const create = async (req, res, next) => {
 export const update = async (req, res, next) => {
   try {
     const id = parseInt(req.params.id);
-    const existing = await prisma.task.findUnique({ where: { id } });
+    const existing = await prisma.task.findUnique({
+      where: { id },
+      include: { assignees: { select: { employeeId: true } } },
+    });
     if (!existing) return res.status(404).json({ error: 'Not found' });
 
     const { assigneeIds, ...rest } = req.body;
+
+    const effectiveProjectId = rest.projectId !== undefined ? rest.projectId : existing.projectId;
+    if (!effectiveProjectId) return res.status(400).json({ error: 'Project is required' });
+    const effectiveAssigneeIds = assigneeIds !== undefined
+      ? assigneeIds
+      : existing.assignees.map(a => a.employeeId);
+    if (!effectiveAssigneeIds || effectiveAssigneeIds.length === 0) {
+      return res.status(400).json({ error: 'At least one assignee is required' });
+    }
+    const validationError = await assertAssigneesBelongToProject(effectiveProjectId, effectiveAssigneeIds);
+    if (validationError) return res.status(400).json({ error: validationError });
+
     const changes = {};
     if (rest.statusId && rest.statusId !== existing.statusId) {
       const [from, to] = await Promise.all([

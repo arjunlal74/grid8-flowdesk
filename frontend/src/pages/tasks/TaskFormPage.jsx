@@ -1,11 +1,11 @@
-import { useForm, Controller } from 'react-hook-form';
+import { useEffect, useMemo } from 'react';
+import { useForm, Controller, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { createTask } from '../../api/tasks.api.js';
 import { getTaskStatuses } from '../../api/settings.api.js';
-import { getEmployees } from '../../api/employees.api.js';
 import { getProjects } from '../../api/projects.api.js';
 import Input, { Select, Textarea } from '../../components/ui/Input.jsx';
 import Button from '../../components/ui/Button.jsx';
@@ -17,8 +17,8 @@ const schema = z.object({
   description: z.string().optional(),
   statusId: z.coerce.number().int().positive('Required'),
   priority: z.string().default('MEDIUM'),
-  projectId: z.coerce.number().int().positive().optional(),
-  assigneeIds: z.array(z.number()).optional(),
+  projectId: z.coerce.number().int().positive('Required'),
+  assigneeIds: z.array(z.number()).min(1, 'Required'),
   dueDate: z.string().optional(),
   estimatedHours: z.coerce.number().optional(),
 });
@@ -29,13 +29,40 @@ export default function TaskFormPage() {
   const defaultStatusId = sp.get('statusId');
 
   const { data: statuses } = useQuery({ queryKey: ['task-statuses'], queryFn: getTaskStatuses });
-  const { data: employees } = useQuery({ queryKey: ['employees'], queryFn: getEmployees });
   const { data: projects } = useQuery({ queryKey: ['projects'], queryFn: getProjects });
 
-  const { register, handleSubmit, control, formState: { errors } } = useForm({
+  const { register, handleSubmit, control, setValue, formState: { errors } } = useForm({
     resolver: zodResolver(schema),
     defaultValues: { statusId: defaultStatusId ? parseInt(defaultStatusId) : undefined, priority: 'MEDIUM', assigneeIds: [] },
   });
+
+  const projectIdValue = useWatch({ control, name: 'projectId' });
+  const assigneeIdsValue = useWatch({ control, name: 'assigneeIds' }) || [];
+
+  const selectedProject = useMemo(
+    () => (projectIdValue ? projects?.find(p => String(p.id) === String(projectIdValue)) : null),
+    [projects, projectIdValue]
+  );
+
+  const projectEmployees = useMemo(() => {
+    if (!selectedProject) return [];
+    const byId = new Map();
+    selectedProject.members?.forEach(m => { if (m.employee) byId.set(m.employee.id, m.employee); });
+    if (selectedProject.manager) byId.set(selectedProject.manager.id, selectedProject.manager);
+    return Array.from(byId.values());
+  }, [selectedProject]);
+
+  useEffect(() => {
+    if (!selectedProject) {
+      if (assigneeIdsValue.length) setValue('assigneeIds', [], { shouldDirty: true });
+      return;
+    }
+    const allowedIds = new Set(projectEmployees.map(e => e.id));
+    const filtered = assigneeIdsValue.filter(id => allowedIds.has(id));
+    if (filtered.length !== assigneeIdsValue.length) {
+      setValue('assigneeIds', filtered, { shouldDirty: true });
+    }
+  }, [selectedProject, projectEmployees, assigneeIdsValue, setValue]);
 
   const { mutate, isPending } = useMutation({
     mutationFn: createTask,
@@ -65,20 +92,22 @@ export default function TaskFormPage() {
             <option value="HIGH">High</option>
             <option value="URGENT">Urgent</option>
           </Select>
-          <Select label="Project" {...register('projectId')}>
-            <option value="">No project</option>
+          <Select label="Project *" error={errors.projectId?.message} {...register('projectId')}>
+            <option value="">Select a project…</option>
             {projects?.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
           </Select>
           <div className="col-span-2">
-            <label className="block text-[12px] mb-1.5" style={{ color: 'var(--text-tertiary)' }}>Assignees</label>
+            <label className="block text-[12px] mb-1.5" style={{ color: 'var(--text-tertiary)' }}>Assignees *</label>
             <Controller
               control={control}
               name="assigneeIds"
               render={({ field }) => (
                 <AssigneeMultiSelect
-                  employees={employees || []}
+                  employees={projectEmployees}
                   value={field.value || []}
                   onChange={field.onChange}
+                  disabled={!selectedProject}
+                  placeholder={selectedProject ? 'Select assignees' : 'Select a project first'}
                 />
               )}
             />

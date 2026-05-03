@@ -5,9 +5,9 @@ export const createTaskSchema = z.object({
   description: z.string().optional(),
   statusId: z.coerce.number().int().positive(),
   priority: z.enum(['LOW','MEDIUM','HIGH','URGENT']).default('MEDIUM'),
-  projectId: z.coerce.number().int().positive().optional(),
+  projectId: z.coerce.number().int().positive(),
   leadId: z.coerce.number().int().positive().optional(),
-  assigneeIds: z.array(z.coerce.number().int().positive()).optional(),
+  assigneeIds: z.array(z.coerce.number().int().positive()).min(1),
   dueDate: z.coerce.date().optional(),
   estimatedHours: z.coerce.number().nonnegative().optional(),
 });
