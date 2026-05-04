@@ -19,6 +19,7 @@ import EmployeesPage from './pages/employees/EmployeesPage.jsx';
 import EmployeeFormPage from './pages/employees/EmployeeFormPage.jsx';
 import EmployeeDetailPage from './pages/employees/EmployeeDetailPage.jsx';
 import AttendancePage from './pages/attendance/AttendancePage.jsx';
+import NotesPage from './pages/notes/NotesPage.jsx';
 import SettingsPage from './pages/settings/SettingsPage.jsx';
 import LeadSettingsLayout from './pages/settings/LeadSettingsLayout.jsx';
 import TaskSettingsLayout from './pages/settings/TaskSettingsLayout.jsx';
@@ -63,6 +64,7 @@ export default function App() {
         <Route path="employees/:id" element={<EmployeeDetailPage />} />
 
         <Route path="attendance" element={<AttendancePage />} />
+        <Route path="notes" element={<NotesPage />} />
 
         <Route path="settings" element={<SettingsPage />}>
           <Route path="leads" element={<LeadSettingsLayout />}>

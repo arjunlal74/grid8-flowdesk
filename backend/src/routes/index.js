@@ -7,6 +7,7 @@ import projectsRoutes from './projects.routes.js';
 import employeesRoutes from './employees.routes.js';
 import settingsRoutes from './settings.routes.js';
 import attendanceRoutes from './attendance.routes.js';
+import notesRoutes from './notes.routes.js';
 
 const router = Router();
 
@@ -18,5 +19,6 @@ router.use('/projects', projectsRoutes);
 router.use('/employees', employeesRoutes);
 router.use('/settings', settingsRoutes);
 router.use('/attendance', attendanceRoutes);
+router.use('/notes', notesRoutes);
 
 export default router;

@@ -1,7 +1,7 @@
 import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, Users, CheckSquare, FolderKanban,
-  Briefcase, Settings, Grid2X2, CalendarClock
+  Briefcase, Settings, Grid2X2, CalendarClock, StickyNote
 } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore.js';
 
@@ -20,6 +20,7 @@ const memberNav = [
   { to: '/tasks', icon: CheckSquare, label: 'Tasks' },
   { to: '/projects', icon: FolderKanban, label: 'Projects' },
   { to: '/attendance', icon: CalendarClock, label: 'Attendance' },
+  { to: '/notes', icon: StickyNote, label: 'Notes' },
 ];
 
 export default function Sidebar() {
